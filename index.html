@@ -1,0 +1,2423 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Route Queen — Otonom Mikrolojistik Platformu</title>
+  <meta name="description"
+    content="Süpermarket zincirleri için sıfır israf, maksimum kâr. Node-to-node otonom redistribüsyon platformu.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,300&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    :root {
+      --ink: #0a0c0f;
+      --paper: #f5f2ec;
+      --gold: #c8a84b;
+      --gold-light: #e8c96b;
+      --gold-pale: #f7edcf;
+      --teal: #0d5c63;
+      --teal-mid: #1a7a82;
+      --teal-light: #1a8a94;
+      --teal-pale: #e0f2f4;
+      --white: #ffffff;
+      --gray-100: #f0ede7;
+      --gray-200: #e0ddd7;
+      --gray-300: #c8c4bc;
+      --gray-500: #7a7570;
+      --gray-700: #3d3a35;
+      --danger: #c0392b;
+      --success: #0a7a4a;
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      font-size: 16px;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--paper);
+      color: var(--ink);
+      overflow-x: hidden;
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--paper);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--gold);
+      border-radius: 3px;
+    }
+
+    /* NAV */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.2rem 5rem;
+      background: rgba(245, 242, 236, 0.95);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(200, 168, 75, 0.2);
+      transition: padding 0.3s, box-shadow 0.3s;
+    }
+
+    nav.scrolled {
+      padding: 0.75rem 5rem;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.07);
+    }
+
+    .nav-logo {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 1.3rem;
+      letter-spacing: -0.02em;
+      color: var(--ink);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .nav-logo span {
+      color: var(--gold);
+    }
+
+    .nav-logo-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--teal);
+      border-radius: 50%;
+      margin-left: 2px;
+      animation: pulse 2s infinite;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 2.5rem;
+      list-style: none;
+      align-items: center;
+    }
+
+    .nav-links a {
+      font-size: 0.8rem;
+      font-weight: 500;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      color: var(--gray-700);
+      text-decoration: none;
+      transition: color 0.2s;
+      position: relative;
+    }
+
+    .nav-links a::after {
+      content: '';
+      position: absolute;
+      bottom: -3px;
+      left: 0;
+      right: 0;
+      height: 1.5px;
+      background: var(--teal);
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.25s ease;
+    }
+
+    .nav-links a:hover {
+      color: var(--teal);
+    }
+
+    .nav-links a:hover::after {
+      transform: scaleX(1);
+    }
+
+    .nav-cta {
+      background: var(--ink) !important;
+      color: var(--gold) !important;
+      padding: 0.55rem 1.3rem;
+      border-radius: 3px;
+    }
+
+    .nav-cta::after {
+      display: none !important;
+    }
+
+    .nav-cta:hover {
+      background: var(--teal) !important;
+      color: var(--white) !important;
+    }
+
+    .nav-toggle {
+      display: none;
+      flex-direction: column;
+      gap: 5px;
+      cursor: pointer;
+      background: none;
+      border: none;
+      padding: 5px;
+    }
+
+    .nav-toggle span {
+      display: block;
+      width: 22px;
+      height: 2px;
+      background: var(--ink);
+      border-radius: 2px;
+    }
+
+    /* UTILS */
+    .section-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--teal);
+      margin-bottom: 1.2rem;
+    }
+
+    .section-label::before {
+      content: '';
+      width: 28px;
+      height: 2px;
+      background: var(--gold);
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+
+    section {
+      padding: 7rem 5rem;
+      position: relative;
+    }
+
+    .btn-primary {
+      background: var(--ink);
+      color: var(--white);
+      padding: 0.9rem 2rem;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.88rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: transform 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-primary::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--teal);
+      transform: translateX(-101%);
+      transition: transform 0.35s ease;
+    }
+
+    .btn-primary:hover::after {
+      transform: translateX(0);
+    }
+
+    .btn-primary span {
+      position: relative;
+      z-index: 1;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--ink);
+      padding: 0.9rem 2rem;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.88rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      border: 1.5px solid rgba(10, 12, 15, 0.28);
+      border-radius: 3px;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: border-color 0.25s, color 0.25s, transform 0.2s;
+    }
+
+    .btn-outline:hover {
+      border-color: var(--teal);
+      color: var(--teal);
+      transform: translateY(-1px);
+    }
+
+    .reveal {
+      opacity: 0;
+      transform: translateY(28px);
+      transition: opacity 0.7s ease, transform 0.7s ease;
+    }
+
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .reveal-delay-1 {
+      transition-delay: 0.12s;
+    }
+
+    .reveal-delay-2 {
+      transition-delay: 0.24s;
+    }
+
+    .reveal-delay-3 {
+      transition-delay: 0.36s;
+    }
+
+    /* HERO */
+    .hero {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      align-items: center;
+      padding: 8rem 5rem 5rem;
+      gap: 5rem;
+    }
+
+    .hero-bg {
+      position: absolute;
+      inset: 0;
+      z-index: -2;
+      background: radial-gradient(ellipse 70% 90% at 75% 55%, rgba(13, 92, 99, 0.07) 0%, transparent 68%), radial-gradient(ellipse 45% 65% at 15% 85%, rgba(200, 168, 75, 0.05) 0%, transparent 70%);
+    }
+
+    .hero-grid {
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      background-image: linear-gradient(rgba(200, 168, 75, 0.07) 1px, transparent 1px), linear-gradient(90deg, rgba(200, 168, 75, 0.07) 1px, transparent 1px);
+      background-size: 64px 64px;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--gold-pale);
+      border: 1px solid rgba(200, 168, 75, 0.45);
+      padding: 0.38rem 1rem;
+      border-radius: 3px;
+      font-size: 0.73rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--gray-700);
+      margin-bottom: 1.8rem;
+      animation: fadeUp 0.7s ease both;
+    }
+
+    .hero-badge::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      background: var(--gold);
+      border-radius: 50%;
+    }
+
+    h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(2.6rem, 4.8vw, 4.2rem);
+      font-weight: 800;
+      line-height: 1.07;
+      letter-spacing: -0.03em;
+      color: var(--ink);
+      margin-bottom: 1.5rem;
+      animation: fadeUp 0.7s 0.1s ease both;
+    }
+
+    h1 em {
+      font-style: normal;
+      color: var(--teal);
+      position: relative;
+    }
+
+    h1 em::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      bottom: 1px;
+      right: 0;
+      height: 3px;
+      background: var(--gold);
+      transform: scaleX(0);
+      transform-origin: left;
+      animation: underlineGrow 0.6s 1.1s ease forwards;
+    }
+
+    h2 {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(1.8rem, 3.2vw, 2.7rem);
+      font-weight: 800;
+      line-height: 1.12;
+      letter-spacing: -0.025em;
+      color: var(--ink);
+      margin-bottom: 1rem;
+    }
+
+    .hero-sub {
+      font-size: 1.05rem;
+      line-height: 1.75;
+      color: var(--gray-700);
+      max-width: 520px;
+      margin-bottom: 2.5rem;
+      animation: fadeUp 0.7s 0.2s ease both;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      animation: fadeUp 0.7s 0.3s ease both;
+    }
+
+    .hero-visual {
+      animation: fadeUp 0.9s 0.25s ease both;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* MAP CARD */
+    .map-card {
+      background: var(--white);
+      border: 1px solid rgba(200, 168, 75, 0.25);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 28px 90px rgba(0, 0, 0, 0.09), 0 4px 18px rgba(0, 0, 0, 0.04);
+      position: relative;
+    }
+
+    .map-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--teal), var(--gold));
+      z-index: 500;
+    }
+
+    .map-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.2rem 1.5rem 1rem;
+      background: var(--white);
+      position: relative;
+      z-index: 10;
+    }
+
+    .map-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+      color: var(--gray-500);
+    }
+
+    .map-live {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.73rem;
+      font-weight: 700;
+      color: var(--teal);
+    }
+
+    .map-live::before {
+      content: '';
+      width: 7px;
+      height: 7px;
+      background: var(--teal);
+      border-radius: 50%;
+      animation: pulse 1.5s infinite;
+    }
+
+    #istanbul-map {
+      height: 260px;
+      width: 100%;
+    }
+
+    .map-footer {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--gray-200);
+    }
+
+    .mf-stat {
+      background: var(--white);
+      padding: 0.9rem;
+      text-align: center;
+    }
+
+    .mf-val {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.35rem;
+      font-weight: 800;
+      display: block;
+    }
+
+    .mf-val.gold {
+      color: var(--gold);
+    }
+
+    .mf-val.teal {
+      color: var(--teal);
+    }
+
+    .mf-label {
+      font-size: 0.62rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--gray-500);
+    }
+
+    /* TICKER */
+    .ticker-bar {
+      background: var(--ink);
+      padding: 0.7rem 0;
+      overflow: hidden;
+      white-space: nowrap;
+      position: relative;
+    }
+
+    .ticker-bar::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 80px;
+      background: linear-gradient(90deg, var(--ink), transparent);
+      z-index: 2;
+    }
+
+    .ticker-bar::after {
+      content: '';
+      position: absolute;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      width: 80px;
+      background: linear-gradient(-90deg, var(--ink), transparent);
+      z-index: 2;
+    }
+
+    .ticker-track {
+      display: inline-flex;
+      gap: 4rem;
+      animation: ticker 30s linear infinite;
+    }
+
+    .ticker-item {
+      font-family: 'Syne', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.55);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .ticker-item .hi {
+      color: var(--gold);
+    }
+
+    /* PROBLEM */
+    .problem-section {
+      background: var(--ink);
+      color: var(--white);
+    }
+
+    .problem-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5rem;
+      align-items: center;
+    }
+
+    .problem-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      overflow: hidden;
+      margin-top: 2.5rem;
+    }
+
+    .pstat {
+      background: rgba(255, 255, 255, 0.03);
+      padding: 2rem 1.5rem;
+    }
+
+    .pstat-num {
+      font-family: 'Syne', sans-serif;
+      font-size: 2.5rem;
+      font-weight: 800;
+      color: var(--gold);
+      line-height: 1;
+    }
+
+    .pstat-unit {
+      font-size: 0.85rem;
+      color: rgba(255, 255, 255, 0.5);
+      margin-top: 0.4rem;
+    }
+
+    .pain-card {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .pain-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+
+    .pain-icon {
+      width: 42px;
+      height: 42px;
+      background: rgba(200, 168, 75, 0.15);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      flex-shrink: 0;
+    }
+
+    .pain-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--white);
+      margin-bottom: 0.35rem;
+    }
+
+    .pain-desc {
+      font-size: 0.85rem;
+      line-height: 1.6;
+      color: rgba(255, 255, 255, 0.55);
+    }
+
+    /* HOW IT WORKS */
+    .hiw-section {
+      background: var(--paper);
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2rem;
+      margin-top: 3.5rem;
+    }
+
+    .step-card {
+      background: var(--white);
+      border: 1px solid var(--gray-200);
+      border-radius: 10px;
+      padding: 2.5rem;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+
+    .step-card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.08);
+    }
+
+    .step-card::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--teal), var(--gold));
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.4s ease;
+    }
+
+    .step-card:hover::after {
+      transform: scaleX(1);
+    }
+
+    .step-num {
+      font-family: 'Syne', sans-serif;
+      font-size: 3.5rem;
+      font-weight: 800;
+      color: var(--gray-200);
+      line-height: 1;
+      margin-bottom: 1.5rem;
+    }
+
+    .step-icon {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+    }
+
+    .step-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--ink);
+      margin-bottom: 0.75rem;
+    }
+
+    .step-desc {
+      font-size: 0.88rem;
+      line-height: 1.65;
+      color: var(--gray-700);
+    }
+
+    .step-tag {
+      display: inline-block;
+      margin-top: 1.2rem;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      color: var(--teal);
+      background: var(--teal-pale);
+      padding: 0.3rem 0.8rem;
+      border-radius: 2px;
+    }
+
+    /* TECH */
+    .tech-section {
+      background: var(--white);
+    }
+
+    .tech-grid {
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      gap: 3rem;
+      margin-top: 3rem;
+    }
+
+    .tech-sidebar {
+      border-left: 2px solid var(--gray-200);
+      padding-left: 2rem;
+    }
+
+    .tech-tab {
+      display: block;
+      background: none;
+      border: none;
+      text-align: left;
+      padding: 1rem 0;
+      font-family: 'Syne', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--gray-500);
+      cursor: pointer;
+      transition: color 0.3s;
+      width: 100%;
+      position: relative;
+    }
+
+    .tech-tab.active {
+      color: var(--teal);
+    }
+
+    .tech-tab.active::before {
+      content: '';
+      position: absolute;
+      left: -2rem;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: linear-gradient(to bottom, var(--teal), var(--gold));
+    }
+
+    .tech-tab:hover {
+      color: var(--teal-mid);
+    }
+
+    .tech-content-box {
+      background: var(--gray-100);
+      border-radius: 12px;
+      padding: 2.5rem;
+      display: none;
+      animation: fadeUp 0.4s ease;
+    }
+
+    .tech-content-box.active {
+      display: block;
+    }
+
+    .bro-points {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+
+    .bro-point {
+      display: flex;
+      gap: 1rem;
+      align-items: flex-start;
+      background: var(--white);
+      border-radius: 8px;
+      padding: 1.2rem;
+      border: 1px solid var(--gray-200);
+      transition: transform 0.2s;
+    }
+
+    .bro-point:hover {
+      transform: translateX(4px);
+    }
+
+    .bro-num {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: var(--gold);
+      flex-shrink: 0;
+      width: 28px;
+    }
+
+    .bro-text {
+      font-size: 0.88rem;
+      line-height: 1.65;
+      color: var(--gray-700);
+    }
+
+    .bro-text strong {
+      color: var(--ink);
+    }
+
+    /* CALC */
+    .calc-section {
+      background: var(--ink);
+      color: var(--white);
+      padding: 6rem 5rem;
+    }
+
+    .calc-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.1fr;
+      gap: 5rem;
+      align-items: center;
+    }
+
+    .calc-panel {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 2.5rem;
+    }
+
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.83rem;
+      color: rgba(255, 255, 255, 0.65);
+      margin-bottom: 0.5rem;
+    }
+
+    .calc-input {
+      width: 100%;
+      padding: 0.9rem 1.1rem;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(200, 168, 75, 0.35);
+      border-radius: 6px;
+      color: var(--white);
+      font-family: 'Syne', sans-serif;
+      font-size: 1.15rem;
+      outline: none;
+      transition: border 0.3s;
+    }
+
+    .calc-input:focus {
+      border-color: var(--gold);
+    }
+
+    .calc-results {
+      margin-top: 2rem;
+      padding-top: 2rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+
+    .res-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.9rem;
+      color: rgba(255, 255, 255, 0.75);
+    }
+
+    .res-row .res-val {
+      font-family: 'Syne', sans-serif;
+      font-weight: 600;
+    }
+
+    .res-row.total {
+      font-size: 1.5rem;
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      margin-top: 0.5rem;
+      padding-top: 1rem;
+      border-top: 1px solid rgba(200, 168, 75, 0.3);
+    }
+
+    .res-row.total .res-val {
+      color: var(--gold);
+    }
+
+    .res-minus {
+      color: #e57373;
+    }
+
+    .res-guarantee {
+      font-size: 0.78rem;
+      color: rgba(255, 255, 255, 0.4);
+      margin-top: 1rem;
+      line-height: 1.5;
+    }
+
+    /* WHY RQ */
+    .why-section {
+      background: var(--paper);
+    }
+
+    .why-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5rem;
+      align-items: start;
+    }
+
+    .why-features {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      margin-top: 2rem;
+    }
+
+    .wf {
+      display: flex;
+      gap: 1.2rem;
+      align-items: flex-start;
+    }
+
+    .wf-icon {
+      width: 44px;
+      height: 44px;
+      background: var(--white);
+      border: 1px solid var(--gray-200);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+      flex-shrink: 0;
+    }
+
+    .wf-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--ink);
+      margin-bottom: 0.3rem;
+    }
+
+    .wf-desc {
+      font-size: 0.85rem;
+      line-height: 1.6;
+      color: var(--gray-700);
+    }
+
+    .commission-card {
+      background: var(--white);
+      border-radius: 12px;
+      padding: 2rem;
+      box-shadow: 0 16px 50px rgba(0, 0, 0, 0.07);
+      border: 1px solid var(--gray-200);
+    }
+
+    .cc-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--gray-500);
+      margin-bottom: 1.5rem;
+    }
+
+    .cf-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.85rem 0;
+      border-bottom: 1px dashed var(--gray-200);
+      font-size: 0.9rem;
+    }
+
+    .cf-row:last-child {
+      border-bottom: none;
+    }
+
+    .cf-val {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 1rem;
+    }
+
+    .cf-val.pos {
+      color: var(--success);
+      font-size: 1.1rem;
+    }
+
+    .cf-val.neg {
+      color: var(--danger);
+    }
+
+    .cc-note {
+      font-size: 0.78rem;
+      color: var(--gray-500);
+      line-height: 1.6;
+      margin-top: 1.2rem;
+      padding-top: 1.2rem;
+      border-top: 1px solid var(--gray-100);
+    }
+
+    /* COURIER */
+    .courier-section {
+      background: var(--ink);
+      color: var(--white);
+    }
+
+    .courier-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5rem;
+      align-items: center;
+    }
+
+    .courier-perks {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .cp {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+      padding: 1.5rem;
+      transition: background 0.3s;
+    }
+
+    .cp:hover {
+      background: rgba(255, 255, 255, 0.07);
+    }
+
+    .cp-icon {
+      font-size: 1.5rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .cp-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--white);
+      margin-bottom: 0.35rem;
+    }
+
+    .cp-desc {
+      font-size: 0.83rem;
+      color: rgba(255, 255, 255, 0.55);
+      line-height: 1.55;
+    }
+
+    .bid-board {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .bid-header {
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+      font-family: 'Syne', sans-serif;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.4);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .bid-header::before {
+      content: '';
+      width: 7px;
+      height: 7px;
+      background: var(--gold);
+      border-radius: 50%;
+      animation: pulse 1.5s infinite;
+    }
+
+    .bid-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.1rem 1.5rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      transition: background 0.2s;
+    }
+
+    .bid-item:last-child {
+      border-bottom: none;
+    }
+
+    .bid-item:hover {
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .bid-item.winning {
+      background: rgba(13, 92, 99, 0.2);
+    }
+
+    .bid-info {
+      font-size: 0.88rem;
+      color: var(--white);
+      font-weight: 500;
+    }
+
+    .bid-route {
+      font-size: 0.75rem;
+      color: rgba(255, 255, 255, 0.45);
+      margin-top: 0.25rem;
+    }
+
+    .bid-price {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: rgba(255, 255, 255, 0.6);
+    }
+
+    .bid-price.win {
+      color: var(--gold);
+    }
+
+    /* ABOUT */
+    .about-section {
+      background: var(--paper);
+    }
+
+    .about-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5rem;
+      align-items: center;
+    }
+
+    .about-card {
+      background: var(--white);
+      border-radius: 12px;
+      padding: 3rem;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.07);
+      border: 1px solid var(--gray-200);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .about-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      bottom: 0;
+      background: linear-gradient(to bottom, var(--teal), var(--gold));
+    }
+
+    .about-mission {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--ink);
+      line-height: 1.55;
+      margin-bottom: 1.5rem;
+      font-style: italic;
+    }
+
+    .about-mission em {
+      color: var(--teal);
+      font-style: normal;
+    }
+
+    .about-values {
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+
+    .av-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: 0.88rem;
+      color: var(--gray-700);
+    }
+
+    .av-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--gold);
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .about-origin {
+      background: var(--ink);
+      color: var(--white);
+      border-radius: 10px;
+      padding: 1.5rem;
+      margin-top: 1.5rem;
+    }
+
+    .ao-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 0.5rem;
+    }
+
+    .ao-text {
+      font-size: 0.87rem;
+      line-height: 1.65;
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    /* TEAM */
+    .team-section {
+      background: var(--white);
+    }
+
+    .team-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2rem;
+      margin-top: 3rem;
+    }
+
+    .team-card {
+      background: var(--gray-100);
+      border-radius: 12px;
+      overflow: hidden;
+      text-align: center;
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+
+    .team-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 24px 50px rgba(0, 0, 0, 0.09);
+    }
+
+    .tc-header {
+      background: var(--ink);
+      padding: 2.5rem 1rem 3rem;
+      position: relative;
+    }
+
+    .tc-initials {
+      width: 76px;
+      height: 76px;
+      background: var(--white);
+      border: 3px solid var(--gold);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Syne', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--ink);
+      margin: 0 auto;
+      position: absolute;
+      bottom: -38px;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
+    .tc-body {
+      padding: 3.5rem 1.8rem 2rem;
+    }
+
+    .tc-name {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--ink);
+    }
+
+    .tc-role {
+      color: var(--teal);
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin: 0.4rem 0 1rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .tc-desc {
+      font-size: 0.87rem;
+      line-height: 1.65;
+      color: var(--gray-700);
+    }
+
+    .partners-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 2rem;
+      margin-top: 4rem;
+      padding-top: 3rem;
+      border-top: 1px solid var(--gray-200);
+    }
+
+    .partner-badge {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.7rem 1.5rem;
+      border: 1.5px solid var(--gray-200);
+      border-radius: 6px;
+      transition: border-color 0.3s, transform 0.2s;
+    }
+
+    .partner-badge:hover {
+      border-color: var(--gold);
+      transform: translateY(-2px);
+    }
+
+    .pb-logo {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 0.95rem;
+      color: var(--ink);
+    }
+
+    .pb-tag {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--gray-500);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    /* CTA */
+    .cta-section {
+      background: var(--teal);
+      color: var(--white);
+      text-align: center;
+      padding: 8rem 5rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cta-section::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image: linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+      background-size: 60px 60px;
+    }
+
+    .cta-section h2 {
+      color: var(--white);
+      max-width: 700px;
+      margin: 0 auto 1.5rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .cta-section p {
+      color: rgba(255, 255, 255, 0.75);
+      max-width: 560px;
+      margin: 0 auto 2.5rem;
+      line-height: 1.7;
+      position: relative;
+      z-index: 1;
+    }
+
+    .cta-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 1.2rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .cta-actions {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      position: relative;
+      z-index: 1;
+    }
+
+    .btn-cta {
+      background: var(--white);
+      color: var(--teal);
+      padding: 1rem 2.2rem;
+      font-family: 'Syne', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 700;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .btn-cta:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    }
+
+    .btn-cta-outline {
+      background: transparent;
+      color: var(--white);
+      border: 1.5px solid rgba(255, 255, 255, 0.4);
+      padding: 1rem 2.2rem;
+      font-family: 'Syne', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 700;
+      border-radius: 4px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: border-color 0.25s, transform 0.2s;
+    }
+
+    .btn-cta-outline:hover {
+      border-color: rgba(255, 255, 255, 0.8);
+      transform: translateY(-2px);
+    }
+
+    .cta-legal {
+      font-size: 0.78rem;
+      color: rgba(255, 255, 255, 0.45);
+      margin-top: 2rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* FOOTER */
+    footer {
+      background: var(--ink);
+      color: var(--white);
+      padding: 3rem 5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1.5rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.07);
+    }
+
+    .foot-logo {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 1.2rem;
+    }
+
+    .foot-logo span {
+      color: var(--gold);
+    }
+
+    .foot-links {
+      display: flex;
+      gap: 2rem;
+      flex-wrap: wrap;
+    }
+
+    .foot-links a {
+      font-size: 0.82rem;
+      color: rgba(255, 255, 255, 0.45);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .foot-links a:hover {
+      color: var(--gold);
+    }
+
+    .foot-copy {
+      font-size: 0.78rem;
+      color: rgba(255, 255, 255, 0.3);
+    }
+
+    /* LEAFLET */
+    .leaflet-container {
+      font-family: 'DM Sans', sans-serif;
+    }
+
+    .custom-node-popup .leaflet-popup-content-wrapper {
+      background: var(--ink);
+      color: var(--white);
+      border-radius: 8px;
+      border: 1px solid rgba(200, 168, 75, 0.4);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    }
+
+    .custom-node-popup .leaflet-popup-tip {
+      background: var(--ink);
+    }
+
+    .custom-node-popup .leaflet-popup-content {
+      margin: 10px 14px;
+      font-size: 0.82rem;
+      line-height: 1.5;
+    }
+
+    /* ANIMATIONS */
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(24px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes underlineGrow {
+      to {
+        transform: scaleX(1);
+      }
+    }
+
+    @keyframes pulse {
+      0% {
+        box-shadow: 0 0 0 0 rgba(13, 92, 99, 0.5);
+      }
+
+      70% {
+        box-shadow: 0 0 0 9px rgba(13, 92, 99, 0);
+      }
+
+      100% {
+        box-shadow: 0 0 0 0 rgba(13, 92, 99, 0);
+      }
+    }
+
+    @keyframes ticker {
+      from {
+        transform: translateX(0);
+      }
+
+      to {
+        transform: translateX(-50%);
+      }
+    }
+
+    /* RESPONSIVE */
+    @media (max-width: 1100px) {
+      nav {
+        padding: 1rem 2.5rem;
+      }
+
+      section,
+      .calc-section {
+        padding: 5rem 2.5rem;
+      }
+
+      .hero {
+        padding: 7rem 2.5rem 4rem;
+        gap: 3rem;
+      }
+
+      footer {
+        padding: 2.5rem;
+      }
+    }
+
+    @media (max-width: 900px) {
+
+      .hero,
+      .problem-grid,
+      .calc-grid,
+      .courier-grid,
+      .why-grid,
+      .tech-grid,
+      .about-grid {
+        grid-template-columns: 1fr;
+        gap: 3rem;
+      }
+
+      .steps {
+        grid-template-columns: 1fr;
+      }
+
+      .team-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .problem-stats {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      nav ul {
+        display: none;
+      }
+
+      .nav-toggle {
+        display: flex;
+      }
+
+      nav ul.open {
+        display: flex;
+        flex-direction: column;
+        position: fixed;
+        top: 64px;
+        left: 0;
+        right: 0;
+        background: var(--paper);
+        padding: 2rem;
+        gap: 1.2rem;
+        border-bottom: 1px solid var(--gray-200);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        z-index: 999;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .team-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .courier-perks {
+        grid-template-columns: 1fr;
+      }
+
+      h1 {
+        font-size: 2.3rem;
+      }
+
+      h2 {
+        font-size: 1.7rem;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- NAV -->
+  <nav id="navbar">
+    <a href="#" class="nav-logo">ROUTE <span>QUEEN</span><span class="nav-logo-dot"></span></a>
+    <ul id="navlinks" class="nav-links">
+      <li><a href="#nasil-calisir">Nasıl Çalışır</a></li>
+      <li><a href="#algoritma">Algoritma</a></li>
+      <li><a href="#roi">Kâr Hesapla</a></li>
+      <li><a href="#hakkimizda">Hakkımızda</a></li>
+      <li><a href="#ekip">Ekip</a></li>
+      <li><a href="#iletisim" class="nav-cta">Demo Al</a></li>
+    </ul>
+    <button class="nav-toggle" id="navToggle" aria-label="Menü">
+      <span></span><span></span><span></span>
+    </button>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-bg"></div>
+    <div class="hero-grid"></div>
+    <div style="position:relative;z-index:1;">
+      <div class="hero-badge">B2B Mikrolojistik / Otonom Karar Ağı</div>
+      <h1>Gıda İsrafını <em>Kâra</em> Dönüştüren Otonom Platform</h1>
+      <p class="hero-sub">Route Queen, hantal Hub and Spoke modelini yıkıyor. Better Road Optimization (BRO)
+        algoritmamız, son kullanma tarihi yaklaşan ürünleri otonom olarak şubeden şubeye yeniden dağıtıyor. Her transfer
+        matematiksel olarak kâr garantili. Sadece kârınız üzerinden komisyon alıyoruz.</p>
+      <div class="hero-actions">
+        <a href="#roi" class="btn-primary"><span>Kârımı Hesapla →</span></a>
+        <a href="#nasil-calisir" class="btn-outline">Nasıl Çalışır?</a>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <div class="map-card">
+        <div class="map-header">
+          <span class="map-title">A101 İstanbul Ağ Haritası</span>
+          <span class="map-live">Algoritma Aktif</span>
+        </div>
+        <div id="istanbul-map"></div>
+        <div class="map-footer">
+          <div class="mf-stat"><span class="mf-val gold">96.4</span><span class="mf-label">Recovery Score</span></div>
+          <div class="mf-stat"><span class="mf-val teal">₺1040</span><span class="mf-label">Kurtarılan Değer</span>
+          </div>
+          <div class="mf-stat"><span class="mf-val">12 dk</span><span class="mf-label">İhale Süresi</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TICKER -->
+  <div class="ticker-bar">
+    <div class="ticker-track">
+      <span class="ticker-item">* Recovery Score <span class="hi">96.4</span></span>
+      <span class="ticker-item">* BRO Algoritması</span>
+      <span class="ticker-item">* Her Transfer Kâr Garantili</span>
+      <span class="ticker-item">* Kuryelere Açık Artırma Teklif</span>
+      <span class="ticker-item">* Akıllı Sepet Optimizasyonu</span>
+      <span class="ticker-item">* Node to Node Ağ</span>
+      <span class="ticker-item">* Migros / A101</span>
+      <span class="ticker-item">* Recovery Score <span class="hi">96.4</span></span>
+      <span class="ticker-item">* BRO Algoritması</span>
+      <span class="ticker-item">* Her Transfer Kâr Garantili</span>
+      <span class="ticker-item">* Kuryelere Açık Artırma Teklif</span>
+      <span class="ticker-item">* Akıllı Sepet Optimizasyonu</span>
+      <span class="ticker-item">* Node to Node Ağ</span>
+      <span class="ticker-item">* Migros / A101 </span>
+    </div>
+  </div>
+
+  <!-- PROBLEM -->
+  <section class="problem-section" id="sorun">
+    <div class="problem-grid">
+      <div class="reveal">
+        <div class="section-label" style="color:var(--gold)">Pazar</div>
+        <h2 style="color:var(--white)">Süpermarketler Her Yıl Milyarlarca Lira Kaybediyor</h2>
+        <p style="color:rgba(255,255,255,0.65);line-height:1.75;font-size:0.95rem;margin-top:0.75rem;">Gıda israfı ve
+          stok eksikliği, perakende sektörünün büyük sorunlarıdır. Mevcut çözümler sadece uyarı temelli çalışır ve bu
+          noktada efektif bir yaklaşım
+          sergileyemezler. Route Queen bu boşluğu kapatıyor.</p>
+        <div class="problem-stats">
+          <div class="pstat">
+            <div class="pstat-num">%4–7.4</div>
+            <div class="pstat-unit">Stok Eksikliği Nedeniyle Ciro Kaybı <small
+                style="display:block;font-size:0.72rem;opacity:.6;">(NielsenIQ, 2022)</small></div>
+          </div>
+          <div class="pstat">
+            <div class="pstat-num">%2</div>
+            <div class="pstat-unit">Gıda İsrafının Net Satış Maliyeti <small
+                style="display:block;font-size:0.72rem;opacity:.6;">(Waste360, 2024)</small></div>
+          </div>
+          <div class="pstat">
+            <div class="pstat-num">%30–40</div>
+            <div class="pstat-unit">Küresel Gıda Arzının Yıllık İsraf Oranı <small
+                style="display:block;font-size:0.72rem;opacity:.6;">(Wang, 2026)</small></div>
+          </div>
+          <div class="pstat">
+            <div class="pstat-num">%100</div>
+            <div class="pstat-unit">Route Queen ile kar etme olasılığınız</div>
+          </div>
+        </div>
+      </div>
+      <div class="reveal reveal-delay-1">
+        <div class="pain-card">
+          <div class="pain-item">
+            <div class="pain-icon">O</div>
+            <div>
+              <div class="pain-title">Hub and Spoke</div>
+              <div class="pain-desc">Ürün merkezden şubelere dağıtılır ve artık oradan dışarıya çıkamaz. Geleneksel
+                lojistik, performans odaklı
+                değildir ve stoğu biten ürünlerin yenilenmesinde çok yavaştır. Son kullanma tarihi yaklaşan ürünleri
+                daha hızlı satılan şubelere gönderemez.</div>
+            </div>
+          </div>
+          <div class="pain-item">
+            <div class="pain-icon">O</div>
+            <div>
+              <div class="pain-title">Mevcut Yazılımlar</div>
+              <div class="pain-desc">Stok yönetim yazılımları veriyi üretir ve alarm verir ama ürünü fiziksel olarak
+                hareket ettiremez ve hızlı bir çözüm sunamaz.</div>
+            </div>
+          </div>
+          <div class="pain-item">
+            <div class="pain-icon">O</div>
+            <div>
+              <div class="pain-title">Route Queen</div>
+              <div class="pain-desc">API ile anlık stok verisini alır, BRO algoritmasıyla en kârlı hedefi belirler,
+                kuryelere teklif vererek gerekli işlemleri başlatır. Üstelik tamamen otonom.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="hiw-section" id="nasil-calisir">
+    <div class="reveal" style="text-align:center;">
+      <div class="section-label" style="justify-content:center;">Sistem Mimarisi</div>
+      <h2>Üç Adımda Tam Otomasyon</h2>
+      <p style="max-width:600px;margin:0.75rem auto 0;color:var(--gray-700);font-size:0.95rem;line-height:1.7;">Stok
+        verilerini çekmekten
+        kuryelere teklif verilmesine kadar her adım insan müdahalesi olmadan gerçekleşir.</p>
+    </div>
+    <div class="steps">
+      <div class="step-card reveal">
+        <div class="step-num">01</div>
+        <div class="step-icon">---</div>
+        <div class="step-title">API Entegrasyonu & Canlı Veri</div>
+        <p class="step-desc">ERP entegrasyon katmanı, süpermarket sistemlerine bağlanır. Anlık stok, son
+          kullanma tarihi ve talep bilgisi sürekli izlenir. Mevcut altyapınızı değiştirmenize gerek yok.</p>
+        <span class="step-tag">ERP</span>
+      </div>
+      <div class="step-card reveal reveal-delay-1">
+        <div class="step-num">02</div>
+        <div class="step-icon">---</div>
+        <div class="step-title">BRO Algoritması & Recovery Score</div>
+        <p class="step-desc">Better Road Optimization algoritması stoğu azalan ya da son kullanma tarihi yaklaşan
+          ürünler için yakındaki tüm düğümleri
+          tarar. Recovery Score hesaplanır yalnızca Net Recovery pozitif olduğunda transfer gerçekleştirilir.</p>
+        <span class="step-tag">Otonom Karar</span>
+      </div>
+      <div class="step-card reveal reveal-delay-2">
+        <div class="step-num">03</div>
+        <div class="step-icon">---</div>
+        <div class="step-title">Kurye İhalesi</div>
+        <p class="step-desc">Transfer kararı verildiğinde sistem, bölgedeki bağımsız kuryelere anlık ihale açar. Bir
+          kurye fiyat teklifini kabul edene kadar fiyat kademeli olarak artar.</p>
+        <span class="step-tag">Dinamik İhale</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- TECH -->
+  <section class="tech-section" id="algoritma">
+    <div class="reveal">
+      <div class="section-label">Otonom</div>
+      <h2>Matematiğin Lojistiğe Dönüşümü</h2>
+      <p style="max-width:680px;color:var(--gray-700);line-height:1.7;font-size:0.95rem;margin-top:0.5rem;">Route
+        Queen'in kalbi BRO algoritmasıdır. Kâr garantisine dayanan bu sistem, her transfer kararını matematiksel
+        olarak doğrulayarak alır.</p>
+    </div>
+    <div class="tech-grid reveal">
+      <div class="tech-sidebar">
+        <button class="tech-tab active" data-target="tab-bro">Better Road Optimization</button>
+        <button class="tech-tab" data-target="tab-score">Recovery Score</button>
+        <button class="tech-tab" data-target="tab-basket">Akıllı Sepet</button>
+        <button class="tech-tab" data-target="tab-taxi">Kurye Ağı</button>
+      </div>
+      <div>
+        <div id="tab-bro" class="tech-content-box active">
+          <h3 style="font-family:'Syne';font-size:1.4rem;font-weight:800;margin-bottom:0.75rem;">Düğümden Düğüme
+            (Node to Node) Ağ</h3>
+          <p style="color:var(--gray-500);font-size:0.88rem;margin-bottom:1.5rem;">Geleneksel hub and spoke modelinin
+            aksine BRO, mağazaları doğrudan birbirine bağlar:</p>
+          <div class="bro-points">
+            <div class="bro-point">
+              <div class="bro-num">1</div>
+              <div class="bro-text"><strong>Sürekli İzleme:</strong> Her mağazanın canlı stok verisi ve son kullanma
+                tarihleri API üzerinden anlık okunur. Son kullanma tarihi yaklaşan ya da stoğu azalan ürünler otomatik
+                işaretlenir.</div>
+            </div>
+            <div class="bro-point">
+              <div class="bro-num">2</div>
+              <div class="bro-text"><strong>Düğüm Taraması:</strong> Kaynak düğümden başlayarak yakın
+                diğer düğümler taranır ve sıralanır. Her biri için Recovery Score hesaplanır.
+              </div>
+            </div>
+            <div class="bro-point">
+              <div class="bro-num">3</div>
+              <div class="bro-text"><strong>Matematiksel Kâr Kesinliği:</strong> Transfer ancak Saved Value, taşıma
+                masrafını ve komisyonu kesinlikle aştığında başlatılır. Zarar ettiren hiçbir transfer yapılmaz.</div>
+            </div>
+            <div class="bro-point">
+              <div class="bro-num">4</div>
+              <div class="bro-text"><strong>Otonom Teklif Başlatma:</strong> Optimal hedef belirlendikten sonra
+                kuryelere bir kurye teklifi kabul edene kadar kademeli artan bir
+                teklif, insan müdahalesi olmadan başlatılır.</div>
+            </div>
+          </div>
+        </div>
+        <div id="tab-score" class="tech-content-box">
+          <h3 style="font-family:'Syne';font-size:1.4rem;font-weight:800;margin-bottom:1rem;">Recovery Score Matematiği
+          </h3>
+          <p style="color:var(--gray-700);line-height:1.7;font-size:0.92rem;margin-bottom:1.2rem;">Neden A'dan
+            B'ye gidiyor da C'ye gitmiyor? Her olası hedef düğüm için çok değişkenli bir skor hesaplanır:</p>
+          <div
+            style="background:var(--white);border-radius:8px;padding:1.5rem;display:flex;flex-direction:column;gap:0.75rem;border:1px solid var(--gray-200);">
+            <div
+              style="display:flex;justify-content:space-between;font-size:0.88rem;padding-bottom:0.75rem;border-bottom:1px dashed var(--gray-200);">
+              <span style="color:var(--gray-700)">Saved Value (Kurtarılan Ürün Değeri)</span><span
+                style="font-family:'Syne';font-weight:800;color:var(--teal)">+ Pozitif</span>
+            </div>
+            <div
+              style="display:flex;justify-content:space-between;font-size:0.88rem;padding-bottom:0.75rem;border-bottom:1px dashed var(--gray-200);">
+              <span style="color:var(--gray-700)">Anlık Yerel Talep (Hedef Düğüm)</span><span
+                style="font-family:'Syne';font-weight:800;color:var(--teal)">+ Pozitif</span>
+            </div>
+            <div
+              style="display:flex;justify-content:space-between;font-size:0.88rem;padding-bottom:0.75rem;border-bottom:1px dashed var(--gray-200);">
+              <span style="color:var(--gray-700)">Kurye Ücreti</span><span
+                style="font-family:'Syne';font-weight:800;color:#c0392b">− Negatif</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:1rem;padding-top:0.5rem;"><span
+                style="font-family:'Syne';font-weight:700">Net Recovery</span><span
+                style="font-family:'Syne';font-weight:800;font-size:1.2rem;color:var(--success)">&gt; 0 →
+                Transfer</span></div>
+          </div>
+        </div>
+        <div id="tab-basket" class="tech-content-box">
+          <h3 style="font-family:'Syne';font-size:1.4rem;font-weight:800;margin-bottom:1rem;">Akıllı Sepet
+          </h3>
+          <p style="color:var(--gray-700);line-height:1.7;font-size:0.92rem;">Akıllı sepet, aynı anda farklı ürün
+            çeşitlerinin taşınmasını sağlar. Son kullanma tarihi yaklaşan ürünleri
+            yüksek marjlı, acil talep gören stoğu bulunmayan ürünlerle aynı pakette eşleştirir. Sepetler tek çeşit ürün
+            taşımaya göre daha
+            kârlı hale
+            gelir ve kurye verimi maksimize edilir.</p>
+          <div
+            style="margin-top:1.5rem;background:var(--white);border-radius:8px;padding:1.2rem;border:1px solid var(--gray-200);">
+            <div
+              style="font-size:0.75rem;font-weight:700;color:var(--gray-500);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:1rem;">
+              Örnek Sepet</div>
+            <div style="display:flex;flex-direction:column;gap:0.6rem;">
+              <div
+                style="display:flex;justify-content:space-between;font-size:0.87rem;padding:0.5rem 0;border-bottom:1px dashed var(--gray-200);">
+                <span>!! Son Kullanma tarihi ≤ 4 gün - 8 sepette</span><span
+                  style="color:var(--danger);font-weight:600">Kurtarılıyor</span>
+              </div>
+              <div
+                style="display:flex;justify-content:space-between;font-size:0.87rem;padding:0.5rem 0;border-bottom:1px dashed var(--gray-200);">
+                <span>!! Yüksek Marjlı Stok Azalıyor - 11 sepette</span><span
+                  style="color:var(--success);font-weight:600">Satış
+                  Fırsatı</span>
+              </div>
+              <div
+                style="display:flex;justify-content:space-between;font-size:0.9rem;padding:0.5rem 0;font-family:'Syne';font-weight:700;">
+                <span>Net Recovery Skoru</span><span style="color:var(--teal)">96.4 / 100 ✓</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="tab-taxi" class="tech-content-box">
+          <h3 style="font-family:'Syne';font-size:1.4rem;font-weight:800;margin-bottom:1rem;">Kurye Ağı</h3>
+          <p style="color:var(--gray-700);line-height:1.7;font-size:0.92rem;">Karar verildiğinde sistem civardaki
+            bağımsız kuryelere anlık ihale açar. Bu model <strong>sıfır sabit taşıyıcı maliyeti</strong> ve
+            <strong>anlık
+              coğrafi teklif</strong> sağlar. Trendyol Go ve Getir gibi platformların on binlerce aktif kurye havuzuyla
+            transfer
+            gerçekleştirilir.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ROI CALCULATOR -->
+  <section class="calc-section" id="roi">
+    <div class="calc-grid">
+      <div class="reveal">
+        <div class="section-label" style="color:var(--gold)">Finansal Model</div>
+        <h2 style="color:var(--white)">Kârınızı Kendiniz Görün</h2>
+        <p style="color:rgba(255,255,255,0.65);line-height:1.75;margin-top:0.75rem;font-size:0.95rem;">Sistemimiz,
+          kurtarılan ürün değerinin lojistik masraflarını <em
+            style="color:var(--gold);font-style:normal;font-weight:600;">"kesinlikle aşmasını "</em>
+          garantileyen matematiksel bir hesaplama üzerine kurulu.</p>
+        <ul style="list-style:none;display:flex;flex-direction:column;gap:0.85rem;margin-top:2rem;">
+          <li style="display:flex;align-items:center;gap:0.75rem;font-size:0.88rem;color:rgba(255,255,255,0.75);"><span
+              style="width:20px;height:20px;background:rgba(13,92,99,0.5);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.7rem;flex-shrink:0;">✓</span>Kurulum
+            veya sabit ücret yok</li>
+          <li style="display:flex;align-items:center;gap:0.75rem;font-size:0.88rem;color:rgba(255,255,255,0.75);"><span
+              style="width:20px;height:20px;background:rgba(13,92,99,0.5);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.7rem;flex-shrink:0;">✓</span>Yalnızca
+            gerçekleşen Net Recovery'den komisyon</li>
+          <li style="display:flex;align-items:center;gap:0.75rem;font-size:0.88rem;color:rgba(255,255,255,0.75);"><span
+              style="width:20px;height:20px;background:rgba(13,92,99,0.5);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.7rem;flex-shrink:0;">✓</span>Net
+            Recovery negatif olursa transfer gerçekleşmez</li>
+          <li style="display:flex;align-items:center;gap:0.75rem;font-size:0.88rem;color:rgba(255,255,255,0.75);"><span
+              style="width:20px;height:20px;background:rgba(13,92,99,0.5);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.7rem;flex-shrink:0;">✓</span>
+            Kâr taahhüdü</li>
+        </ul>
+      </div>
+      <div class="calc-panel reveal reveal-delay-1">
+        <div class="form-group"><label>Günlük Taşınacak Ürün Sayısı</label><input type="number" id="dailyItems"
+            class="calc-input" value="500" min="0"></div>
+        <div class="form-group"><label>Ürün Başına Ortalama Maliyet (₺)</label><input type="number" id="avgPrice"
+            class="calc-input" value="100" min="0"></div>
+        <div class="calc-results">
+          <div class="res-row"><span>Aylık Brüt Kurtarılan Değer</span><span class="res-val"
+              id="resGross">₺675.000</span></div>
+          <div class="res-row"><span>Tahmini Taşıma Gideri (≈%12.5)</span><span class="res-val res-minus"
+              id="resTransport">− ₺84.375</span></div>
+          <div class="res-row"><span>Route Queen Komisyonu (%20)</span><span class="res-val res-minus" id="resCom">−
+              ₺81.000</span></div>
+          <div class="res-row total"><span>Net Kârınız</span><span class="res-val" id="resNet">₺509.625</span>
+          </div>
+        </div>
+        <p class="res-guarantee">* Simülasyon amaçlıdır. Gerçek değerler ürün kategorisi ve bölgeye göre değişir.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHY RQ -->
+  <section class="why-section" id="neden-rq">
+    <div class="why-grid">
+      <div>
+        <div class="section-label reveal">Değer</div>
+        <h2 class="reveal">Neden Route Queen?</h2>
+        <div class="why-features">
+          <div class="wf reveal">
+            <div class="wf-icon">+</div>
+            <div>
+              <div class="wf-title">Performans Tabanlı Komisyon</div>
+              <p class="wf-desc">Yalnızca gerçekleşen Net Recovery üzerinden komisyon alıyoruz. Kâr etmediğinizde biz de
+                ücret almıyoruz.</p>
+            </div>
+          </div>
+          <div class="wf reveal reveal-delay-1">
+            <div class="wf-icon">+</div>
+            <div>
+              <div class="wf-title">Sıfır Sabit Maliyet, Sıfır Risk</div>
+              <p class="wf-desc">Kurulum ücreti, lisans bedeli veya minimum taahhüt yok.</p>
+            </div>
+          </div>
+          <div class="wf reveal reveal-delay-2">
+            <div class="wf-icon">+</div>
+            <div>
+              <div class="wf-title">Hemen Başlayın</div>
+              <p class="wf-desc">API'lerimiz sayesinde mevcut sistemlerinizi değiştirmeden kısa sürede
+                içinde sistem entegrasyonu tamamlanır.</p>
+            </div>
+          </div>
+          <div class="wf reveal reveal-delay-3">
+            <div class="wf-icon">+</div>
+            <div>
+              <div class="wf-title">Tam Şeffaflık</div>
+              <p class="wf-desc">Her teslimat, her Recovery Score ve her komisyon ücreti dashboard'da görünür.
+                Veriler her zaman size aittir.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="reveal reveal-delay-1">
+        <div class="commission-card">
+          <div class="cc-label">Finansal Model — Örnek Senaryo</div>
+          <div class="cf-row"><span style="color:var(--gray-700)">Kurtarılan Ürün Değeri (brüt)</span><span
+              class="cf-val">₺50.000</span></div>
+          <div class="cf-row"><span style="color:var(--gray-700)">Taşıma Gideri</span><span class="cf-val neg">−
+              ₺6.250</span></div>
+          <div class="cf-row"><span style="color:var(--gray-700)">Route Queen Komisyonu (%20)</span><span
+              class="cf-val neg">− ₺10.000</span></div>
+          <div class="cf-row"><span style="color:var(--success);font-weight:700">Net Recovery (Sizin
+              Kârınız)</span><span class="cf-val pos">₺33.750</span></div>
+          <div class="cc-note">Net Recovery negatifse transfer gerçekleşmez. Bu da her daim kârı garantiler.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- COURIER -->
+  <section class="courier-section" id="kuryeler">
+    <div class="courier-grid">
+      <div>
+        <div class="section-label" style="color:var(--gold)">Kurye Ağı</div>
+        <h2 style="color:var(--white)">Bir Kurye Olarak Sisteme Dahil Olun</h2>
+        <p style="color:rgba(255,255,255,0.65);line-height:1.75;font-size:0.95rem;margin:0.75rem 0 2rem;">Route Queen'in
+          dinamik ihale sistemi bölgenizdeki görevleri gerçek zamanlı listeler. Teklifleri görün, kabul edin, teslim
+          edin ve
+          kazancınız anında bakiyenize aktarılır.</p>
+        <a href="#iletisim" class="btn-primary"><span>Ağa Katıl →</span></a>
+      </div>
+      <div>
+        <div class="courier-perks">
+          <div class="cp">
+            <div class="cp-icon">/\</div>
+            <div class="cp-title">Tek Uygulama</div>
+            <p class="cp-desc">Görevleri görün, teklif alın ve onaylayın.</p>
+          </div>
+          <div class="cp">
+            <div class="cp-icon">/\</div>
+            <div class="cp-title">Anında Bakiye</div>
+            <p class="cp-desc">Teslimat gerçekleştiğinde onayladığınız teklif anında bakiyenize yansır.</p>
+          </div>
+          <div class="cp">
+            <div class="cp-icon">/\</div>
+            <div class="cp-title">Özgür Bakiye Kullanımı</div>
+            <p class="cp-desc">Hesabınızda biriken bakiyeyi istediğiniz zaman çekebilirsiniz.</p>
+          </div>
+          <div class="cp">
+            <div class="cp-icon">/\</div>
+            <div class="cp-title">Esnek Program</div>
+            <p class="cp-desc">Kendi saatlerinizi ve bölgenizi siz belirleyin.</p>
+          </div>
+        </div>
+        <div class="bid-board">
+          <div class="bid-header">Anlık İhale Panosu</div>
+          <div class="bid-item winning">
+            <div>
+              <div class="bid-info">Akıllı Sepet - 21 ürün</div>
+              <div class="bid-route">Maltepe A101 → Kartal A101 - 5.1 km</div>
+            </div>
+            <div class="bid-price win">₺105</div>
+          </div>
+          <div class="bid-item">
+            <div>
+              <div class="bid-info">Standart — 16 ürün</div>
+              <div class="bid-route">Kadıköy Migros → Üsküdar Migros - 3.2 km</div>
+            </div>
+            <div class="bid-price">₺65</div>
+          </div>
+          <div class="bid-item">
+            <div>
+              <div class="bid-info">Akıllı Sepet — 12 ürün</div>
+              <div class="bid-route">Beşiktaş A101 → Şişli A101 - 4.4 km</div>
+            </div>
+            <div class="bid-price">₺75</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ABOUT -->
+  <section class="about-section" id="hakkimizda">
+    <div class="about-grid">
+      <div>
+        <div class="section-label reveal">Biz Kimiz</div>
+        <h2 class="reveal">Route Queen Hakkında</h2>
+        <p class="reveal" style="font-size:0.95rem;line-height:1.8;color:var(--gray-700);margin-top:0.5rem;">Route
+          Queen, İstanbul Teknik Üniversitesi'nde bilgisayar mühendisliği öğrenimi gören <strong>Team Vezir</strong>
+          tarafından kurulan bir B2B mikrolojistik platformudur. Süpermarket zincirlerinin her gün karşılaştığı iki
+          büyük soruna (gıda israfı ve stok yetersizliği) kalıcı, otonom ve yenilikçi bir çözüm üretmek
+          amacıyla 2026 yılında hayata geçirildi.</p>
+        <p class="reveal" style="font-size:0.95rem;line-height:1.8;color:var(--gray-700);margin-top:1rem;">Ekibimiz,
+          yazılım mimarisi, AR-GE ve ekonomi alanlarındaki birbirini tamamlayan disiplinleri bir araya
+          getirerek dahiyane bir çözüm önerisi geliştirdi! Matematiksel olarak kâr garantisi sunan, tamamen
+          otonom çalışan, node to node redistribüsyon ağı.</p>
+        <p class="reveal" style="font-size:0.95rem;line-height:1.8;color:var(--gray-700);margin-top:1rem;">İTÜ Çekirdek
+          ve TÜBİTAK 1512 BİGG hibe programının desteğiyle ilerleyen Route Queen, İstanbul'un yoğun şube
+          ağını ve geniş kurye ağını kullanarak önce Türkiye'de, ardından Avrupa pazarlarında yaygınlaşmayı
+          hedefliyor.</p>
+      </div>
+      <div class="reveal reveal-delay-1">
+        <div class="about-card">
+          <div class="about-mission">"Kısa vadeli kayıpları kâra dönüştürmek / <em>her transfer, her
+              seferinde, kâr garantili.</em>"</div>
+          <div class="about-values">
+            <div class="av-item"><span class="av-dot"></span>Matematiksel doğruluk ve tam şeffaflık</div>
+            <div class="av-item"><span class="av-dot"></span>Sabit maliyet yok, risk yok</div>
+            <div class="av-item"><span class="av-dot"></span>Gıda israfına karşı</div>
+            <div class="av-item"><span class="av-dot"></span>Yetersiz stoğa son</div>
+            <div class="av-item"><span class="av-dot"></span>Tam otonom sistem</div>
+          </div>
+          <div class="about-origin">
+            <div class="ao-label">Kuruluş</div>
+            <div class="ao-text">İstanbul Teknik Üniversitesi - 2026 - Team Vezir<br>Sadece bir ders projesi olarak
+              başlamıştı...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TEAM -->
+  <section class="team-section" id="ekip">
+    <div class="reveal" style="text-align:center;">
+      <div class="section-label" style="justify-content:center;">Yönetim Ekibi</div>
+      <h2>Team Vezir</h2>
+      <p style="max-width:660px;margin:0.75rem auto 0;color:var(--gray-700);font-size:0.92rem;line-height:1.7;">Route
+        Queen, bilgisayar mühendisliği ve ekonomi disiplinlerinin kesişiminden doğan teknik yetkinliği yüksek
+        <strong>Vezir</strong> ekibi tarafından geliştirildi ve geliştirilmeye devam ediyor.
+      </p>
+    </div>
+    <div class="team-grid">
+      <div class="team-card reveal">
+        <div class="tc-header">
+          <div class="tc-initials">AK</div>
+        </div>
+        <div class="tc-body">
+          <div class="tc-name">Alperen KARA</div>
+          <div class="tc-role">Yazılım Takım Lideri</div>
+          <p class="tc-desc">Yazılım mimarisi yetenekleri ve algoritmik düşünme becerisi ile BRO
+            algoritmasının kodlamasına liderlik ediyor.</p>
+        </div>
+      </div>
+      <div class="team-card reveal reveal-delay-1">
+        <div class="tc-header">
+          <div class="tc-initials">MEÇ</div>
+        </div>
+        <div class="tc-body">
+          <div class="tc-name">Mehmet Ensar ÇELİKKAYA</div>
+          <div class="tc-role">AR-GE Direktörü</div>
+          <p class="tc-desc">Mantıksal doğrulama uzmanlığı ve yüksek matematik becerisiyle Recovery Score'un
+            matematiksel kesinliğini ve sistemin
+            güvenilirliğini garanti altına alıyor.</p>
+        </div>
+      </div>
+      <div class="team-card reveal reveal-delay-2">
+        <div class="tc-header">
+          <div class="tc-initials">YKB</div>
+        </div>
+        <div class="tc-body">
+          <div class="tc-name">Yusuf Kerem BAYRAKTAR</div>
+          <div class="tc-role">Finans ve Operasyon Sorumlusu</div>
+          <p class="tc-desc">Bilgisayar Mühendisliği ve Ekonomi çift altyapısıyla operasyonel koordinasyonu, finansal
+            modellemeyi ve stratejik partner ilişkilerini yönetiyor.</p>
+        </div>
+      </div>
+    </div>
+    <div class="partners-row reveal">
+      <div class="partner-badge">
+        <div class="pb-logo">İTÜ ÇEKİRDEK</div>
+        <div class="pb-tag">İnkübatör</div>
+      </div>
+      <div class="partner-badge">
+        <div class="pb-logo">TÜBİTAK 1512</div>
+        <div class="pb-tag">BİGG Hibe</div>
+      </div>
+      <div class="partner-badge">
+        <div class="pb-logo">Trendyol Go</div>
+        <div class="pb-tag">Kurye Ağı</div>
+      </div>
+      <div class="partner-badge">
+        <div class="pb-logo">Getir</div>
+        <div class="pb-tag">Kurye Ağı</div>
+      </div>
+      <div class="partner-badge">
+        <div class="pb-logo">Migros</div>
+        <div class="pb-tag">Pilot Partner</div>
+      </div>
+      <div class="partner-badge">
+        <div class="pb-logo">A101</div>
+        <div class="pb-tag">Pilot Partner</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section" id="iletisim">
+    <div class="cta-label">Harekete Geçin</div>
+    <h2>Gıda İsrafını ve Kâr Kaybınızı Durdurmaya Hazır Mısınız?</h2>
+    <p>Route Queen ekibinden 20 dakikalık ücretsiz bir demo oturumu alın. Simülasyonlar ile sistemin
+      çalışma mantığını öğrenin.</p>
+    <div class="cta-actions">
+      <a href="mailto:karaalperen04@gmail.com" class="btn-cta">Ücretsiz Demo Al →</a>
+      <a href="#algoritma" class="btn-cta-outline">Algoritma Detayları</a>
+    </div>
+    <div class="cta-legal">Kredi kartı gerekmez - Sözleşme zorunluluğu yok - 20 dakika yeterli</div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div>
+      <div class="foot-logo">ROUTE <span>QUEEN</span></div>
+      <p style="font-size:0.78rem;color:rgba(255,255,255,0.35);margin-top:0.4rem;">Süpermarketler İçin B2B Otonom
+        Mikrolojistik Platformu</p>
+    </div>
+    <div class="foot-links">
+      <a href="#nasil-calisir">Nasıl Çalışır</a>
+      <a href="#algoritma">Algoritma</a>
+      <a href="#roi">Kâr Hesapla</a>
+      <a href="#hakkimizda">Hakkımızda</a>
+      <a href="#ekip">Ekip</a>
+    </div>
+    <div class="foot-copy">© 2026 Route Queen · Team Vezir · İstanbul Teknik Üniversitesi</div>
+  </footer>
+
+  <script>
+    // NAV
+    const nav = document.getElementById('navbar');
+    window.addEventListener('scroll', () => nav.classList.toggle('scrolled', window.scrollY > 50));
+    document.getElementById('navToggle').addEventListener('click', () => document.getElementById('navlinks').classList.toggle('open'));
+    document.querySelectorAll('#navlinks a').forEach(a => a.addEventListener('click', () => document.getElementById('navlinks').classList.remove('open')));
+
+    // SCROLL REVEAL
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); observer.unobserve(e.target); } });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+    // ROI
+    function fmt(n) { return '₺' + Math.round(n).toLocaleString('tr-TR'); }
+    function updateCalc() {
+      const items = parseFloat(document.getElementById('dailyItems').value) || 0;
+      const price = parseFloat(document.getElementById('avgPrice').value) || 0;
+      const gross = items * 30 * price;
+      const transport = gross * 0.125;
+      const commission = gross * 0.20;
+      const net = gross - transport - commission;
+      document.getElementById('resGross').textContent = fmt(gross);
+      document.getElementById('resTransport').textContent = '− ' + fmt(transport);
+      document.getElementById('resCom').textContent = '− ' + fmt(commission);
+      document.getElementById('resNet').textContent = fmt(Math.max(0, net));
+    }
+    document.getElementById('dailyItems').addEventListener('input', updateCalc);
+    document.getElementById('avgPrice').addEventListener('input', updateCalc);
+    updateCalc();
+
+    // TECH TABS
+    document.querySelectorAll('.tech-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tech-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tech-content-box').forEach(p => p.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.target).classList.add('active');
+      });
+    });
+
+    // ISTANBUL MAP
+    window.addEventListener('load', () => {
+      const map = L.map('istanbul-map', {
+        center: [41.008, 28.87],
+        zoom: 10,
+        zoomControl: false,
+        scrollWheelZoom: false,
+        dragging: false,
+        attributionControl: false
+      });
+
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        subdomains: 'abcd', maxZoom: 19
+      }).addTo(map);
+
+      // Node definitions
+      const nodes = [
+        { lat: 40.985, lng: 28.725, label: 'A101', name: 'Avcılar Şubesi', type: 'dim' },
+        { lat: 41.038, lng: 28.832, label: 'A101', name: 'Bağcılar Şubesi', type: 'source' },
+        { lat: 41.061, lng: 28.935, label: 'A101', name: 'Fatih Şubesi', type: 'target' },
+        { lat: 41.052, lng: 29.006, label: 'A101', name: 'Beşiktaş Şubesi', type: 'dim' },
+        { lat: 40.990, lng: 29.028, label: 'A101', name: 'Kadıköy Şubesi', type: 'dim' },
+        { lat: 41.033, lng: 29.065, label: 'A101', name: 'Üsküdar Şubesi', type: 'dim' },
+      ];
+
+      function nodeIcon(type) {
+        const cfg = {
+          source: { bg: '#f7edcf', border: '#c8a84b', text: '#0a0c0f', shadow: 'rgba(200,168,75,0.5)', size: 44 },
+          target: { bg: '#e0f2f4', border: '#0d5c63', text: '#0d5c63', shadow: 'rgba(13,92,99,0.4)', size: 44 },
+          dim: { bg: '#ffffff', border: '#c8c4bc', text: '#7a7570', shadow: 'rgba(0,0,0,0.08)', size: 36 }
+        };
+        const c = cfg[type];
+        return L.divIcon({
+          className: '',
+          html: `<div style="width:${c.size}px;height:${c.size}px;background:${c.bg};border:2.5px solid ${c.border};border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:0.58rem;font-weight:800;color:${c.text};box-shadow:0 3px 12px ${c.shadow};"></div>`,
+          iconSize: [c.size, c.size],
+          iconAnchor: [c.size / 2, c.size / 2]
+        });
+      }
+
+      // Source & target coords
+      const srcLL = [41.038, 28.832];
+      const tgtLL = [41.061, 28.935];
+
+      // Dim lines to non-route nodes
+      nodes.filter(n => n.type === 'dim').forEach(n => {
+        L.polyline([srcLL, [n.lat, n.lng]], { color: '#c8c4bc', weight: 1.2, opacity: 0.4, dashArray: '4 5' }).addTo(map);
+      });
+
+      // Active route: M-A → M-E
+      L.polyline([srcLL, tgtLL], { color: '#0d5c63', weight: 3.5, opacity: 0.95 }).addTo(map);
+
+      // Arrow at midpoint
+      const midLL = [(srcLL[0] + tgtLL[0]) / 2, (srcLL[1] + tgtLL[1]) / 2];
+      L.divIcon({ className: '', html: '<div style="color:#0d5c63;font-size:18px;font-weight:900;transform:rotate(-2deg);">→</div>', iconSize: [20, 20], iconAnchor: [10, 10] });
+
+      // Place all node markers with popups
+      nodes.forEach(n => {
+        L.marker([n.lat, n.lng], { icon: nodeIcon(n.type) })
+          .addTo(map)
+          .bindPopup(
+            `<div style="font-family:'Syne',sans-serif;font-weight:800;font-size:0.82rem;color:#fff;">${n.label}</div>
+         <div style="font-size:0.75rem;color:rgba(255,255,255,0.65);margin-top:2px;">${n.name}</div>
+         ${n.type === 'source' ? '<div style="font-size:0.7rem;color:#c8a84b;margin-top:4px;">Son kullanma tarihi yaklaşan ürün</div>' : ''}
+         ${n.type === 'target' ? '<div style="font-size:0.7rem;color:#a8d5da;margin-top:4px;">Ürüne yüksek talep</div>' : ''}`,
+            { className: 'custom-node-popup', offset: [0, -14] }
+          );
+      });
+
+      // Animated courier dot
+      const courierEl = L.divIcon({
+        className: '',
+        html: `<div style="width:14px;height:14px;background:#c8a84b;border-radius:50%;border:3px solid #fff;box-shadow:0 0 10px rgba(200,168,75,0.9);"></div>`,
+        iconSize: [14, 14], iconAnchor: [7, 7]
+      });
+      const courier = L.marker(srcLL, { icon: courierEl, zIndexOffset: 1000 }).addTo(map);
+
+      let t = 0;
+      (function animate() {
+        t = (t + 0.003) % 1;
+        courier.setLatLng([
+          srcLL[0] + (tgtLL[0] - srcLL[0]) * t,
+          srcLL[1] + (tgtLL[1] - srcLL[1]) * t
+        ]);
+        requestAnimationFrame(animate);
+      })();
+    });
+  </script>
+</body>
+
+</html>
